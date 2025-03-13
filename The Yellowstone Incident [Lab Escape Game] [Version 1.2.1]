@@ -1,0 +1,221 @@
+import random
+import time
+
+# Player stats
+player_health = 100
+player_inventory = []  # Starts empty, except for the Dissecting Knife
+pistol_ammo = 10  # Ammo for the pistol
+rifle_ammo = 5    # Ammo for the rifle
+
+# Monster stats
+monsters = {
+    "Mutant Rat": {"health": 30, "damage": 10},
+    "Lab Zombie": {"health": 50, "damage": 15},
+    "Viral Creature": {"health": 80, "damage": 20},
+    "{REDACTED}": {"health": 150, "damage": random.randint(45, 60)},  # Updated damage range to 45-60
+}
+
+# Item stats
+items = {
+    "Health Potion": 30,  # Heals 30 health
+    "Red Bull": 10        # Increases damage by 10 for 1 combat
+}
+
+# Weapon stats as items
+weapon_items = {
+    "Dissecting Knife": {"damage": 20, "ammo_required": 0, "infinite": True},
+    "Pistol": {"damage": 30, "ammo_required": 1},
+    "Rifle": {"damage": 50, "ammo_required": 1},
+    "Chemical": {"damage": 75, "ammo_required": 0, "poison": True, "one_time": True},  # Chemical is one-time use
+}
+
+# Introduction
+def intro():
+    print("Welcome to the Abandoned Laboratory Escape Game!")
+    print("A failed experiment has turned the lab into a dangerous place.")
+    print("You need to navigate through random hallways, fight monsters, and escape.")
+    print("Good luck!")
+
+def print_status():
+    print(f"\nYour health: {player_health}")
+    print(f"Inventory: {player_inventory}")
+    print(f"Pistol Ammo: {pistol_ammo}")
+    print(f"Rifle Ammo: {rifle_ammo}")
+    print("-" * 30)
+
+# Combat function
+def combat(monster_name, monster_health, monster_damage):
+    global player_health, pistol_ammo, rifle_ammo
+    red_bull_active = False  # Tracks if Red Bull boost is active
+
+    print(f"\nYou encounter a {monster_name}!")
+    print(f"It has {monster_health} health and deals {monster_damage} damage.")
+
+    while monster_health > 0 and player_health > 0:
+        print_status()
+        print(f"Items available from inventory: {player_inventory}")
+        choice = input("Choose your action (Weapon/Consumable): ").title()
+
+        # Handle consumables
+        if choice in ["Red Bull", "Health Potion"] and choice in player_inventory:
+            if choice == "Red Bull":
+                red_bull_active = True  # Activates damage boost
+                print("\nYou drink Red Bull! All weapon damage is increased by 10 for this combat.")
+                player_inventory.remove("Red Bull")  # Remove Red Bull after use
+            elif choice == "Health Potion":
+                player_health = min(player_health + 30, 100)  # Restore HP up to max (100)
+                print("\nYou drink a Health Potion and recover 30 HP!")
+                player_inventory.remove("Health Potion")  # Remove Health Potion after use
+            continue
+
+        # Handle weapon choice
+        if choice in weapon_items and choice in player_inventory:
+            weapon = weapon_items[choice]
+            damage_boost = 10 if red_bull_active else 0  # Apply Red Bull boost
+
+            if choice == "Pistol" and pistol_ammo <= 0:
+                print("\nYou are out of pistol ammo!")
+                continue
+            elif choice == "Rifle" and rifle_ammo <= 0:
+                print("\nYou are out of rifle ammo!")
+                continue
+
+            # Determine weapon damage
+            if choice == "Pistol":
+                pistol_ammo -= weapon["ammo_required"]
+                damage_dealt = random.randint(25, 35) + damage_boost
+                monster_health -= damage_dealt
+                print(f"You fire the pistol and deal {damage_dealt} damage to the {monster_name}!")
+            elif choice == "Rifle":
+                rifle_ammo -= weapon["ammo_required"]
+                damage_dealt = random.randint(40, 60) + damage_boost
+                monster_health -= damage_dealt
+                print(f"You fire the rifle and deal {damage_dealt} damage to the {monster_name}!")
+            elif choice == "Dissecting Knife":
+                damage_dealt = random.randint(18, 22) + damage_boost
+                monster_health -= damage_dealt
+                print(f"You stab the {monster_name} with the dissecting knife and deal {damage_dealt} damage!")
+            elif choice == "Chemical":
+                poison_damage = 75 + damage_boost
+                monster_health -= poison_damage
+                print(f"You throw the chemical and deal {poison_damage} damage to the {monster_name}!")
+                player_inventory.remove("Chemical")  # Remove chemical after use
+
+            # Monster counterattack
+            if monster_health > 0:
+                player_health -= monster_damage
+                print(f"The {monster_name} attacks you for {monster_damage} damage!")
+        else:
+            print("Invalid choice or you don't have that in your inventory. Please choose a valid option.")
+            continue
+
+        if player_health <= 0:
+            print("\nYou have been defeated. Game Over.")
+            return False  # Player lost combat
+
+    if monster_health <= 0:
+        print(f"You defeated the {monster_name}!")
+        return True  # Player won combat
+
+
+# Random event chance for lab events
+def random_event():
+    # Define the chances (percentages) for each event
+    chance_for_nothing = 40  # 40% chance for nothing
+    chance_for_item = 20     # 20% chance for an item
+    chance_for_monster = 25  # 25% chance for a monster
+    chance_for_exit = 10     # 10% chance for the exit
+    chance_for_m72_law = 12   # 12% chance to find the M72 LAW
+
+    # Generate a random number between 1 and 100
+    random_number = random.randint(1, 100)
+
+    # Determine which event occurs based on the random number and the probabilities
+    if random_number <= chance_for_nothing:
+        print("You find nothing in this hallway.")
+        return "nothing"
+    
+    elif random_number <= chance_for_nothing + chance_for_item:
+        print("You find an item!")
+        return "item"
+    
+    elif random_number <= chance_for_nothing + chance_for_item + chance_for_monster:
+        print("You encounter a monster!")
+        return "monster"
+    
+    elif random_number <= chance_for_nothing + chance_for_item + chance_for_monster + chance_for_exit:
+        print("You have found the exit!")
+        return "exit"
+
+    elif random_number <= chance_for_nothing + chance_for_item + chance_for_monster + chance_for_exit + chance_for_m72_law:
+        print("You find an M72 LAW and 3 uses of it!")
+        player_inventory.append("M72 LAW")
+        player_inventory.append("M72 LAW Ammo")  # Represents the 3 uses
+        return "m72_law"
+
+    else:
+        print("An unexpected event occurred.")
+        return "unexpected"
+
+
+
+# Hallway navigation: Choose left, right, or straight
+def choose_direction():
+    global player_health
+    
+    print("\nYou reach a junction in the hallway.")
+    choice = input("Do you want to go [L]eft, [R]ight, or [S]traight? ").lower()
+
+    if choice == "l":
+        print("\nYou choose to go left...")
+        return random_event()
+
+    elif choice == "r":
+        print("\nYou choose to go right...")
+        return random_event()
+
+    elif choice == "s":
+        print("\nYou choose to go straight...")
+        return random_event()
+
+    else:
+        print("Invalid choice. Please choose 'L', 'R', or 'S'.")
+        return choose_direction()  # Recursively ask again
+
+
+# Main game loop
+def main():
+    global player_health
+
+    intro()
+
+    # Add only the Dissecting Knife to the player's inventory at the start
+    player_inventory.append("Dissecting Knife")
+
+    while player_health > 0:
+        event_result = choose_direction()
+
+        # If any event leads to the player dying or escaping, break the loop
+        if event_result == "nothing":
+            print("\nYou continue exploring the lab...\n")
+        elif event_result == "item":
+            item = random.choice(list(items.keys()))
+            player_inventory.append(item)
+            print(f"Item found: {item}")
+        elif event_result == "monster":
+            monster = random.choice(list(monsters.keys()))
+            monster_health = monsters[monster]["health"]
+            monster_damage = monsters[monster]["damage"]
+            if not combat(monster, monster_health, monster_damage):
+                break  # Player lost in combat
+        elif event_result == "exit":
+            print("\nCongratulations! You escaped the lab!")
+            break  # Player escaped
+
+        time.sleep(1)  # Simulate time passing
+
+    print("\nGame Over. Thank you for playing!")
+
+
+# Start the game
+main()
